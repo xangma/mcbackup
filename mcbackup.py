@@ -17,12 +17,12 @@ def server_command(cmd):
 def server_start():
     os.chdir(minecraft_dir)
     process = subprocess.Popen(executable, stdin=subprocess.PIPE)
-    print("Server started.")
+    logging.info("Server started.")
     return process
 
 def filter_function(tarinfo):
      if tarinfo.name != exclude_file:
-          print(tarinfo.name,"ADDED")
+          logging.info(tarinfo.name,"ADDED")
           return tarinfo
 
 def make_tarfile(output_filename, source_dir):
@@ -30,15 +30,22 @@ def make_tarfile(output_filename, source_dir):
         tar.add(source_dir, arcname=os.path.basename(source_dir),filter=filter_function)
 
 def backup():
+    global t
     server_command("say Backup starting. World no longer saving...")
     server_command("save-off")
     server_command("save-all")
     time.sleep(3)
     os.chdir(backup_dir)
-    os.remove("%s/minecraft-hour24.tar.gz"%backup_dir)
+    try:
+        os.remove("%s\\minecraft-hour24.tar.gz"%backup_dir)
+    except:
+        pass
     for i in range(24,0,-1):
-        os.rename("%s/minecraft-hour%s.tar.gz"%(backup_dir,i-1), "%s/minecraft-hour%s.tar.gz" %(backup_dir,i))
-    make_tarfile("%s/minecraft-hour0.tar.gz"%backup_dir, minecraft_dir+"/")
+        try:
+            os.rename("%s\\minecraft-hour%s.tar.gz"%(backup_dir,i-1), "%s\\minecraft-hour%s.tar.gz" %(backup_dir,i))
+        except:
+            pass
+    make_tarfile("%s\\minecraft-hour0.tar.gz"%backup_dir, minecraft_dir+"/")
     server_command("save-on")
     server_command("say Backup complete. World now saving. ")
     t = Timer(next_backuptime(), backup)
@@ -51,8 +58,11 @@ def next_backuptime():
     secs=delta_t.seconds+1
     return secs
 
-process=server_start() # START SERVER
-time.sleep(120) # WAIT FOR IT TO START
+try:
+    process=server_start() # START SERVER
+    time.sleep(60) # WAIT FOR IT TO START
+except:
+    pass
 
 t = Timer(next_backuptime(), backup) # FIND NEXT HOURLY MARK
 t.start() # START BACKUP FOR THEN
