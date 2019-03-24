@@ -4,11 +4,28 @@ import time
 import tarfile
 from datetime import datetime
 from threading import Timer
+import logging
+import sys
 
 minecraft_dir = "F:/home/xangma/MCSERVER/survival"
 backup_dir = "Z:/MCSERVER_WORLD1"
 executable = 'java -Xmx2048m -XX:+UseConcMarkSweepGC -jar "%s/spigot-1.12.2.jar"' %minecraft_dir
 exclude_file = "plugins/dynmap"
+
+logname = minecraft_dir + '/' + 'MCSERVER.log'
+
+file_handler = logging.FileHandler(filename=logname)
+stdout_handler = logging.StreamHandler(sys.stdout)
+handlers = [file_handler, stdout_handler]
+
+logging.basicConfig(
+    level=logging.DEBUG, 
+    format='[%(asctime)s] {%(filename)s:%(lineno)d} %(levelname)s - %(message)s',
+    handlers=handlers
+)
+
+logger = logging.getLogger('MCLOG')
+logging.info('Logname: %s' %logname)
 
 def server_command(cmd):
     process.stdin.write(str.encode('%s\n' %cmd)) #just write the command to the input stream
@@ -48,8 +65,11 @@ def backup():
     make_tarfile("%s\\minecraft-hour0.tar.gz"%backup_dir, minecraft_dir+"/")
     server_command("save-on")
     server_command("say Backup complete. World now saving. ")
-    t = Timer(next_backuptime(), backup)
-    t.start()
+    try:
+        t = Timer(next_backuptime(), backup) # FIND NEXT HOURLY MARK
+        t.start() # START BACKUP FOR THEN
+    except:
+        logging.info('',exc_info=True)
 
 def next_backuptime():
     x=datetime.today()
@@ -62,7 +82,10 @@ try:
     process=server_start() # START SERVER
     time.sleep(60) # WAIT FOR IT TO START
 except:
-    pass
+    logging.info('',exc_info=True)
 
-t = Timer(next_backuptime(), backup) # FIND NEXT HOURLY MARK
-t.start() # START BACKUP FOR THEN
+try:
+    t = Timer(next_backuptime(), backup) # FIND NEXT HOURLY MARK
+    t.start() # START BACKUP FOR THEN
+except:
+    logging.info('',exc_info=True)
