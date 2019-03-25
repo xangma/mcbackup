@@ -28,11 +28,13 @@ logger = logging.getLogger('MCLOG')
 logging.info('Logname: %s' %logname)
 
 def server_command(cmd):
+    logging.info('Writing server command')
     process.stdin.write(str.encode('%s\n' %cmd)) #just write the command to the input stream
     process.stdin.flush()
 
 def server_start():
     os.chdir(minecraft_dir)
+    logging.info('Starting server')
     process = subprocess.Popen(executable, stdin=subprocess.PIPE)
     logging.info("Server started.")
     return process
@@ -43,6 +45,7 @@ def filter_function(tarinfo):
           return tarinfo
 
 def make_tarfile(output_filename, source_dir):
+    logging.info('Making tarfile')
     with tarfile.open(output_filename, "w:gz") as tar:
         tar.add(source_dir, arcname=os.path.basename(source_dir),filter=filter_function)
 
@@ -53,10 +56,12 @@ def backup():
     server_command("save-all")
     time.sleep(3)
     os.chdir(backup_dir)
+    logging.info('Deleting last file')
     try:
         os.remove("%s\\minecraft-hour24.tar.gz"%backup_dir)
     except:
         pass
+    logging.info('Renaming old files')
     for i in range(24,0,-1):
         try:
             os.rename("%s\\minecraft-hour%s.tar.gz"%(backup_dir,i-1), "%s\\minecraft-hour%s.tar.gz" %(backup_dir,i))
@@ -65,27 +70,35 @@ def backup():
     make_tarfile("%s\\minecraft-hour0.tar.gz"%backup_dir, minecraft_dir+"/")
     server_command("save-on")
     server_command("say Backup complete. World now saving. ")
+    logging.info('Starting new timer')
     try:
         t = Timer(next_backuptime(), backup) # FIND NEXT HOURLY MARK
         t.start() # START BACKUP FOR THEN
+        logging.info('New timer started')
     except:
         logging.info('',exc_info=True)
+        os.popen('TASKKILL /PID '+str(process.pid)+' /F')
 
 def next_backuptime():
+    logging.info('Calculating next time')
     x=datetime.today()
-    y=x.replace(hour=x.hour+1, minute=0, second=0, microsecond=0)
+    if x.hour != 23:
+        y=x.replace(hour=x.hour+1, minute=0, second=0, microsecond=0)
+    else:
+        y=x.replace(day=x.day+1,hour=0,minute=0,second=0,microsecond=0)
+    logging.info('Next backup time is %s' %y)
     delta_t=y-x
     secs=delta_t.seconds+1
     return secs
 
-try:
-    process=server_start() # START SERVER
-    time.sleep(60) # WAIT FOR IT TO START
-except:
-    logging.info('',exc_info=True)
+process=server_start() # START SERVER
+time.sleep(60) # WAIT FOR IT TO START
 
+logging.info('Starting backup timer')
 try:
     t = Timer(next_backuptime(), backup) # FIND NEXT HOURLY MARK
     t.start() # START BACKUP FOR THEN
+    logging.info('Timer started')
 except:
     logging.info('',exc_info=True)
+    os.popen('TASKKILL /PID '+str(process.pid)+' /F')
