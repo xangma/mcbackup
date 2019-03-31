@@ -13,7 +13,6 @@ executable = 'java -Xmx2048m -XX:+UseConcMarkSweepGC -jar "%s/spigot-1.12.2.jar"
 exclude_file = "plugins/dynmap"
 
 logname = minecraft_dir + '/' + 'MCSERVER.log'
-
 file_handler = logging.FileHandler(filename=logname)
 stdout_handler = logging.StreamHandler(sys.stdout)
 handlers = [file_handler, stdout_handler]
@@ -85,7 +84,17 @@ def next_backuptime():
     if x.hour != 23:
         y=x.replace(hour=x.hour+1, minute=0, second=0, microsecond=0)
     else:
-        y=x.replace(day=x.day+1,hour=0,minute=0,second=0,microsecond=0)
+        try:
+            y=x.replace(day=x.day+1,hour=0,minute=0,second=0,microsecond=0)
+        except:
+            try:
+                y=x.replace(month=x.month+1,day=1,hour=0,minute=0,second=0,microsecond=0)
+            except:
+                try:
+                    y=x.replace(year=x.year+1,month=1,day=1,hour=0,minute=0,second=0,microsecond=0)
+                except:
+                    logging.info('I, the backup script, have no idea what time it is in an hour.',exc_info=True)
+                    os.popen('TASKKILL /PID '+str(process.pid)+' /F')
     logging.info('Next backup time is %s' %y)
     delta_t=y-x
     secs=delta_t.seconds+1
